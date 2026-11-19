@@ -286,6 +286,8 @@ class ChatAvatar : Grid
 
     public int Unread { get; private set; }
 
+    System.Windows.Shapes.Path? _logo;
+
     public ChatAvatar(string label) : this(label, null) { }
 
     ChatAvatar(string label, UIElement? glyph)
@@ -314,16 +316,20 @@ class ChatAvatar : Grid
         Children.Add(_badge);
     }
 
-    /// <summary>The fixed chat icon at the start of the strip: an original speech bubble drawn in white.</summary>
+    /// <summary>The fixed chat icon at the start of the strip: the Messenger logo (Simple Icons, CC0).</summary>
     public static ChatAvatar ChatIcon()
     {
-        var glyph = new System.Windows.Shapes.Path
+        var logo = new System.Windows.Shapes.Path
         {
-            Data = System.Windows.Media.Geometry.Parse("M 2,2 H 12 A 2,2 0 0 1 14,4 V 9 A 2,2 0 0 1 12,11 H 6 L 3,14 V 11 H 2 A 2,2 0 0 1 0,9 V 4 A 2,2 0 0 1 2,2 Z"),
-            Fill = Brushes.White, Width = 11, Height = 11, Stretch = Stretch.Uniform,
+            Data = System.Windows.Media.Geometry.Parse(WinStatusBar.Icons.Messenger),
+            Fill = Blue, Width = Size, Height = Size, Stretch = Stretch.Uniform,
             HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
         };
-        return new ChatAvatar("", glyph);
+        var icon = new ChatAvatar("", logo) { _logo = logo };
+        // The logo is its own shape: no round face behind it and no unread ring around it.
+        icon._face.Fill = Brushes.Transparent;
+        icon._ring.Stroke = Brushes.Transparent;
+        return icon;
     }
 
     public void SetLabel(string label) => _label.Text = label;
@@ -342,7 +348,8 @@ class ChatAvatar : Grid
     /// <summary>Red face on the chat icon: login needed or the chat list could not be read.</summary>
     public void SetAlert(bool alert)
     {
-        if (Picture == null) _face.Fill = alert ? Red : Blue;
+        if (_logo != null) _logo.Fill = alert ? Red : Blue;
+        else if (Picture == null) _face.Fill = alert ? Red : Blue;
     }
 
     public void SetPicture(BitmapSource image)
