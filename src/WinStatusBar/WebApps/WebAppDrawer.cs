@@ -39,7 +39,10 @@ internal sealed class WebAppDrawer : Window
     readonly Border _frame = new();
     Task? _init;
     DispatcherTimer? _slide;
-    DateTime _hiddenAt;
+    DateTime _hiddenAt, _deactivatedAt;
+    bool _expanded;
+    Box? _anchor;
+    TextBlock? _expandGlyph;
 
     /// <summary>A notification from the page: title, body, icon (may be null).</summary>
     public event Action<string, string, BitmapSource?>? Notified;
@@ -65,8 +68,72 @@ internal sealed class WebAppDrawer : Window
         _frame.Child = _web;
         _frame.BorderThickness = new Thickness(0, 0, 1, 0);
         _frame.SetResourceReference(Border.BorderBrushProperty, "BarBorder");
-        Content = _frame;
-        Deactivated += (_, _) => HideDrawer();
+        var page = new DockPanel();
+        var bar = BuildTitleBar();
+        DockPanel.SetDock(bar, Dock.Top);
+        page.Children.Add(bar);
+        page.Children.Add(_frame);
+        Content = page;
+        Deactivated += (_, _) =>
+        {
+            _deactivatedAt = DateTime.Now;
+            // Expanded it behaves like a maximized window: other windows can go over it.
+            if (!_expanded) HideDrawer();
+        };
+    }
+
+    /// <summary>A thin strip above the page: the name, expand/restore, close. Double-click also expands.</summary>
+    FrameworkElement BuildTitleBar()
+    {
+        var bar = new DockPanel { Height = 28, LastChildFill = true };
+        bar.SetResourceReference(Panel.BackgroundProperty, "BarBackground");
+        var close = TitleButton("\uE711", "Đóng", HideDrawer);
+        var expand = TitleButton("\uE740", "Mở rộng toàn màn hình", () => SetExpanded(!_expanded));
+        _expandGlyph = (TextBlock)((Border)expand).Child;
+        DockPanel.SetDock(close, Dock.Right);
+        DockPanel.SetDock(expand, Dock.Right);
+        bar.Children.Add(close);
+        bar.Children.Add(expand);
+        var title = new TextBlock { Text = _app.Label, FontWeight = FontWeights.SemiBold, Margin = new Thickness(10, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+        title.SetResourceReference(TextBlock.ForegroundProperty, "BarText");
+        bar.Children.Add(title);
+        bar.MouseLeftButtonDown += (_, e) =>
+        {
+            if (e.ClickCount == 2) SetExpanded(!_expanded);
+        };
+        return new Border { Child = bar, BorderThickness = new Thickness(0, 0, 0, 1) }.Also(b => b.SetResourceReference(Border.BorderBrushProperty, "BarBorder"));
+    }
+
+    static FrameworkElement TitleButton(string glyph, string tip, Action click)
+    {
+        var text = new TextBlock
+        {
+            Text = glyph, FontFamily = new System.Windows.Media.FontFamily("Segoe Fluent Icons, Segoe MDL2 Assets"), FontSize = 11,
+            HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+        };
+        text.SetResourceReference(TextBlock.ForegroundProperty, "BarText");
+        var button = new Border { Width = 40, Background = System.Windows.Media.Brushes.Transparent, Child = text, ToolTip = tip, Cursor = Cursors.Hand };
+        button.MouseEnter += (_, _) => button.SetResourceReference(Border.BackgroundProperty, "BarBorder");
+        button.MouseLeave += (_, _) => button.Background = System.Windows.Media.Brushes.Transparent;
+        button.MouseLeftButtonUp += (_, e) =>
+        {
+            e.Handled = true;
+            click();
+        };
+        // Keep a double-click on a button from also reaching the title bar.
+        button.MouseLeftButtonDown += (_, e) => e.Handled = true;
+        return button;
+    }
+
+    /// <summary>Expanded fills the whole work area, like a maximized window; restored is the side drawer.</summary>
+    void SetExpanded(bool expanded)
+    {
+        _expanded = expanded;
+        _expandGlyph!.Text = expanded ? "\uE73F" : "\uE740";
+        ((FrameworkElement)_expandGlyph.Parent).ToolTip = expanded ? "Thu về khung bên cạnh" : "Mở rộng toàn màn hình";
+        Topmost = !expanded;
+        if (IsVisible && _anchor is { } anchor) Place(anchor, slide: false);
+        Activate();
     }
 
     /// <summary>Loads the page off-screen at startup, so notifications arrive before the first click.</summary>
@@ -196,13 +263,18 @@ internal sealed class WebAppDrawer : Window
     {
         if (IsVisible && ScreenBox != null)
         {
-            HideDrawer();
+            // Expanded and left behind other windows a while ago: bring it back to the front.
+            if (_expanded && !IsActive && DateTime.Now - _deactivatedAt > TimeSpan.FromMilliseconds(500))
+                Activate();
+            else
+                HideDrawer();
             return;
         }
         // Clicking the bar deactivates the drawer before the click lands: that click meant "close".
         if (DateTime.Now - _hiddenAt < TimeSpan.FromMilliseconds(500)) return;
 
-        Place(anchor);
+        _anchor = anchor;
+        Place(anchor, slide: true);
         Show();
         Activate();
         try
@@ -231,15 +303,15 @@ internal sealed class WebAppDrawer : Window
         Hide();
     }
 
-    void Place(Box anchor)
+    void Place(Box anchor, bool slide)
     {
         var monitor = MonitorFromPoint(new Point32 { X = (int)anchor.X, Y = (int)anchor.Y }, MonitorDefaultToNearest);
         GetDpiForMonitor(monitor, 0, out var dpi, out _);
         var area = FloatingWindow.WorkAreaAt(anchor.X, anchor.Y);
-        var box = Geometry.PlaceDrawerNear(anchor, DrawerWidthDip * dpi / 96.0, area);
+        var box = _expanded ? area : Geometry.PlaceDrawerNear(anchor, DrawerWidthDip * dpi / 96.0, area);
         var right = Geometry.OnRightHalf(anchor, area);
         // The hairline goes on the side facing the screen; the drawer slides in from its own edge.
-        _frame.BorderThickness = right ? new Thickness(1, 0, 0, 0) : new Thickness(0, 0, 1, 0);
+        _frame.BorderThickness = _expanded ? new Thickness(0) : right ? new Thickness(1, 0, 0, 0) : new Thickness(0, 0, 1, 0);
         var hiddenX = right ? box.X + box.W : box.X - box.W;
         ScreenBox = box;
         var handle = new WindowInteropHelper(this).EnsureHandle();
@@ -247,7 +319,7 @@ internal sealed class WebAppDrawer : Window
         DwmSetWindowAttribute(handle, DwmwaWindowCornerPreference, ref corners, sizeof(int));
 
         _slide?.Stop();
-        if (!SystemParameters.ClientAreaAnimation)
+        if (!slide || !SystemParameters.ClientAreaAnimation)
         {
             SetWindowPos(handle, IntPtr.Zero, (int)box.X, (int)box.Y, (int)box.W, (int)box.H, SwpNoZOrder);
             return;
@@ -269,5 +341,14 @@ internal sealed class WebAppDrawer : Window
     {
         if (Uri.TryCreate(uri, UriKind.Absolute, out var u) && u.Scheme is "http" or "https")
             Process.Start(new ProcessStartInfo(u.AbsoluteUri) { UseShellExecute = true });
+    }
+}
+
+internal static class ElementExtensions
+{
+    public static T Also<T>(this T value, Action<T> act)
+    {
+        act(value);
+        return value;
     }
 }
