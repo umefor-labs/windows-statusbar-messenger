@@ -50,8 +50,18 @@ public static class Geometry
         if (panel == null || !Overlaps(box, panel)) return box;
         if (panel.Y - Gap - h >= workArea.Y) return box with { Y = panel.Y - Gap - h };
         if (panel.Y + panel.H + Gap + h <= workArea.Y + workArea.H) return box with { Y = panel.Y + panel.H + Gap };
+        // A full-height drawer leaves no room above or below: go beside it.
+        if (panel.X + panel.W + Gap + w <= workArea.X + workArea.W) return box with { X = panel.X + panel.W + Gap };
         return box;
     }
+
+    // An avatar on the status bar sits outside the work area, because Windows reserves the bar's strip.
+    public static bool IsOnBar(Box anchor, Box workArea) =>
+        anchor.Y >= workArea.Y + workArea.H || anchor.Y + anchor.H <= workArea.Y;
+
+    // The chat opened from the bar: a drawer along the left edge of the work area, as tall as the work area.
+    public static Box PlaceDrawer(double w, Box workArea) =>
+        new(workArea.X, workArea.Y, Math.Min(w, workArea.W), workArea.H);
 
     static bool Overlaps(Box a, Box b) =>
         a.X < b.X + b.W && b.X < a.X + a.W && a.Y < b.Y + b.H && b.Y < a.Y + a.H;

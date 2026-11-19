@@ -23,9 +23,9 @@ public partial class MainWindow : Window
         _antigravity.ToolTip = "Antigravity\nMở Antigravity để cập nhật.";
         UsagePanel.Children.Add(_antigravity);
 
-        // Messenger: chat avatars right after the usage meters; they blink on new messages.
+        // Messenger: chat avatars at the far left of the bar; they blink on new messages.
         _messenger = new MessengerBubbles.MessengerModule();
-        UsagePanel.Children.Add(_messenger.Strip);
+        UsagePanel.Children.Insert(0, _messenger.Strip);
         var menu = ContextMenu;
         menu.Items.Insert(menu.Items.IndexOf(MoveMenu) + 1, _messenger.BuildMenu());
         // Facebook's page can change under the Messenger code; a failure there must not take the bar down.

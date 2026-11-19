@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Threading;
 using MessengerBubbles.Core;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
@@ -21,7 +22,10 @@ class ChatPanel : Window
     const int OpenTries = 40;
     static readonly TimeSpan RetryDelay = TimeSpan.FromMilliseconds(500);
 
-    const int DwmwaWindowCornerPreference = 33, DwmwcpRound = 2;
+    const int DwmwaWindowCornerPreference = 33, DwmwcpRound = 2, DwmwcpDoNotRound = 1;
+    const uint SwpNoSize = 0x0001;
+    const double SlideMs = 200;
+    DispatcherTimer? _slide;
 
     [StructLayout(LayoutKind.Sequential)] struct Point32 { public int X, Y; }
 
@@ -118,8 +122,9 @@ class ChatPanel : Window
 
         _bubble = bubble;
         _openHref = threadHref;
+        var opening = !IsVisible;
+        PlaceBesideBubble(slideIn: opening);
         Show();
-        PlaceBesideBubble();
         Activate();
 
         try
@@ -209,10 +214,11 @@ class ChatPanel : Window
     protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
     {
         base.OnDpiChanged(oldDpi, newDpi);
-        Dispatcher.InvokeAsync(PlaceBesideBubble);
+        Dispatcher.InvokeAsync(() => PlaceBesideBubble(slideIn: false));
     }
 
-    void PlaceBesideBubble()
+    // From the status bar the panel is a drawer on the left edge, full work-area height, sliding in.
+    void PlaceBesideBubble(bool slideIn)
     {
         if (_bubble is not { } bubble) return;
         var monitor = MonitorFromPoint(new Point32 { X = (int)bubble.X, Y = (int)bubble.Y }, MonitorDefaultToNearest);
@@ -220,9 +226,31 @@ class ChatPanel : Window
         var scale = dpi / 96.0;
         var area = FloatingWindow.WorkAreaAt(bubble.X, bubble.Y);
         var (w, h) = Geometry.PanelDips(_settings.PanelSize);
-        var box = Geometry.PlacePanel(bubble, w * scale, h * scale, area);
+        var drawer = Geometry.IsOnBar(bubble, area);
+        var box = drawer ? Geometry.PlaceDrawer(w * scale, area) : Geometry.PlacePanel(bubble, w * scale, h * scale, area);
         _placed = box;
-        SetWindowPos(new WindowInteropHelper(this).Handle, IntPtr.Zero, (int)box.X, (int)box.Y, (int)box.W, (int)box.H, SwpNoZOrder);
+        var handle = new WindowInteropHelper(this).EnsureHandle();
+        // A drawer sits flush against the screen edge, so square corners.
+        var corners = drawer ? DwmwcpDoNotRound : DwmwcpRound;
+        DwmSetWindowAttribute(handle, DwmwaWindowCornerPreference, ref corners, sizeof(int));
+
+        _slide?.Stop();
+        if (!drawer || !slideIn || !SystemParameters.ClientAreaAnimation)
+        {
+            SetWindowPos(handle, IntPtr.Zero, (int)box.X, (int)box.Y, (int)box.W, (int)box.H, SwpNoZOrder);
+            return;
+        }
+        SetWindowPos(handle, IntPtr.Zero, (int)(box.X - box.W), (int)box.Y, (int)box.W, (int)box.H, SwpNoZOrder);
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        _slide = new DispatcherTimer(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(12) };
+        _slide.Tick += (_, _) =>
+        {
+            var t = Math.Min(1, clock.ElapsedMilliseconds / SlideMs);
+            var eased = 1 - Math.Pow(1 - t, 3);
+            SetWindowPos(handle, IntPtr.Zero, (int)(box.X - box.W * (1 - eased)), (int)box.Y, 0, 0, SwpNoZOrder | SwpNoSize);
+            if (t >= 1) _slide?.Stop();
+        };
+        _slide.Start();
     }
 
     async Task InitAsync()

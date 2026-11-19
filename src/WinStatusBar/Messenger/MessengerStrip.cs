@@ -53,7 +53,7 @@ class MessengerStrip : StackPanel
         _panelBox = panelBox;
         Orientation = Orientation.Horizontal;
         VerticalAlignment = VerticalAlignment.Center;
-        Margin = new Thickness(4, 0, 14, 0);
+        Margin = new Thickness(0, 0, 14, 0);
 
         _list = ChatAvatar.ChatIcon();
         _list.MouseLeftButtonUp += (_, e) => { e.Handled = true; Open("", _list); };

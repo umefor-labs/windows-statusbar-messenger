@@ -71,6 +71,35 @@ public class GeometryTests
         Assert.Equal(48 + 1872 - 380, p.X);
     }
 
+    [Theory]
+    [InlineData(1043, true)]
+    [InlineData(3, false)]
+    [InlineData(1000, false)]
+    public void IsOnBar_OnlyOutsideTheWorkArea(double y, bool expected)
+        => Assert.Equal(expected, Geometry.IsOnBar(new Box(300, y, 20, 20), Screen));
+
+    [Fact]
+    public void IsOnBar_TopBar()
+    {
+        var area = new Box(0, 26, 1920, 1014);
+        Assert.True(Geometry.IsOnBar(new Box(300, 3, 20, 20), area));
+    }
+
+    [Fact]
+    public void PlaceDrawer_HugsLeftEdgeAtFullHeight()
+    {
+        var area = new Box(48, 0, 1872, 1014);
+        Assert.Equal(new Box(48, 0, 380, 1014), Geometry.PlaceDrawer(380, area));
+    }
+
+    [Fact]
+    public void PlacePreview_BesideFullHeightDrawer()
+    {
+        var drawer = new Box(0, 0, 380, 1040);
+        var p = Geometry.PlacePreview(new Box(10, 1043, 20, 20), 280, 56, Screen, drawer);
+        Assert.Equal(380 + 8, p.X);
+    }
+
     [Fact]
     public void PlacePanel_DoesNotCoverBubble()
     {
