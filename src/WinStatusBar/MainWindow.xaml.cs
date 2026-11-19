@@ -29,9 +29,9 @@ public partial class MainWindow : Window
         var menu = ContextMenu;
         menu.Items.Insert(menu.Items.IndexOf(MoveMenu) + 1, _messenger.BuildMenu());
 
-        // Muse (Meta's AI agent): its icon right after Messenger, same drawer and notifications.
+        // Muse (Meta's AI agent), shown as JARVIS at the far right of the bar; same drawer and notifications.
         _muse = new WebApps.WebAppModule(WebApps.WebApp.Muse);
-        UsagePanel.Children.Insert(1, _muse.Button);
+        ((Panel)StatsPanel.Parent).Children.Add(_muse.Button);
         menu.Items.Insert(menu.Items.IndexOf(MoveMenu) + 2, _muse.BuildMenu());
         // Facebook's page can change under the Messenger code; a failure there must not take the bar down.
         Application.Current.DispatcherUnhandledException += (_, e) =>

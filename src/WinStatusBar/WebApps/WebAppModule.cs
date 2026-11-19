@@ -14,11 +14,12 @@ using Box = MessengerBubbles.Core.Box;
 namespace WinStatusBar.WebApps;
 
 /// <summary>A site shown as a drawer from the bar. Pages from <see cref="Hosts"/> (and their subdomains) stay inside.</summary>
-internal sealed record WebApp(string Name, string Url, string[] Hosts, string Letter, Color Color)
+internal sealed record WebApp(string Name, string Label, string Url, string[] Hosts, string Letter, Color Color)
 {
-    public static readonly WebApp Muse = new("Muse", "https://muse.ai/",
+    // Ngài's Muse agent goes by JARVIS on the bar.
+    public static readonly WebApp Muse = new("Muse", "JARVIS", "https://muse.ai/",
         // Muse signs in with a Meta account.
-        ["muse.ai", "meta.com", "meta.ai", "facebook.com", "instagram.com"], "M", Color.FromRgb(0x08, 0x66, 0xFF));
+        ["muse.ai", "meta.com", "meta.ai", "facebook.com", "instagram.com"], "J", Color.FromRgb(0x08, 0x66, 0xFF));
 
     string Dir => System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "WinStatusBar", "WebApps", Name.ToLowerInvariant());
@@ -32,12 +33,12 @@ internal sealed record WebApp(string Name, string Url, string[] Hosts, string Le
 }
 
 /// <summary>
-/// The site's icon on the bar, next to Messenger: click opens the drawer; a notification makes it blink,
+/// The site's icon and name at the right end of the bar: click opens the drawer; a notification makes it blink,
 /// shows a badge and the same preview card and sound as a new message.
 /// </summary>
 internal sealed class WebAppModule : IDisposable
 {
-    const double IconSize = 14;
+    const double IconSize = 20;
     static readonly Brush Red = Frozen(Color.FromRgb(0xE5, 0x39, 0x35));
 
     readonly WebApp _app;
@@ -68,15 +69,24 @@ internal sealed class WebAppModule : IDisposable
             HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top,
             Child = _badgeText, Visibility = Visibility.Collapsed,
         };
-        var root = new Grid
-        {
-            Width = IconSize + 7, Height = IconSize + 6, Margin = new Thickness(0, 0, 14, 0),
-            VerticalAlignment = VerticalAlignment.Center, Background = Brushes.Transparent,
-            Cursor = System.Windows.Input.Cursors.Hand, ToolTip = app.Name,
-        };
+        var avatar = new Grid { Width = IconSize + 5, Height = IconSize + 4, VerticalAlignment = VerticalAlignment.Center };
         _face.HorizontalAlignment = HorizontalAlignment.Left;
-        root.Children.Add(_face);
-        root.Children.Add(_badge);
+        avatar.Children.Add(_face);
+        avatar.Children.Add(_badge);
+        var label = new TextBlock
+        {
+            Text = app.Label, FontWeight = FontWeights.SemiBold, VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(3, 0, 0, 0),
+        };
+        label.SetResourceReference(TextBlock.ForegroundProperty, "BarText");
+        var root = new StackPanel
+        {
+            Orientation = Orientation.Horizontal, Margin = new Thickness(14, 0, 0, 0),
+            VerticalAlignment = VerticalAlignment.Center, Background = Brushes.Transparent,
+            Cursor = System.Windows.Input.Cursors.Hand, ToolTip = $"{app.Label} ({app.Name})",
+        };
+        root.Children.Add(avatar);
+        root.Children.Add(label);
         Button = root;
         SetIcon(LoadCachedIcon());
 
@@ -92,7 +102,7 @@ internal sealed class WebAppModule : IDisposable
         _blink.Tick += (_, _) =>
         {
             _dim = !_dim;
-            _face.Opacity = _dim ? 0.3 : 1;
+            Button.Opacity = _dim ? 0.3 : 1;
         };
         _drawer.Notified += OnNotified;
         _drawer.TitleCountChanged += n =>
@@ -107,8 +117,8 @@ internal sealed class WebAppModule : IDisposable
 
     public MenuItem BuildMenu()
     {
-        var root = new MenuItem { Header = _app.Name };
-        var open = new MenuItem { Header = $"Mở {_app.Name}" };
+        var root = new MenuItem { Header = $"{_app.Label} ({_app.Name})" };
+        var open = new MenuItem { Header = $"Mở {_app.Label}" };
         open.Click += (_, _) => _drawer.Toggle(PixelBox(Button));
         var reload = new MenuItem { Header = "Tải lại trang" };
         reload.Click += (_, _) => _drawer.Reload();
@@ -133,14 +143,14 @@ internal sealed class WebAppModule : IDisposable
         var count = Math.Max(_pending, _titleCount);
         _badgeText.Text = count > 99 ? "99+" : count.ToString();
         _badge.Visibility = count > 0 ? Visibility.Visible : Visibility.Collapsed;
-        ((FrameworkElement)Button).ToolTip = count > 0 ? $"{_app.Name}\n{count} thông báo mới" : _app.Name;
+        Button.ToolTip = count > 0 ? $"{_app.Label} ({_app.Name})\n{count} thông báo mới" : $"{_app.Label} ({_app.Name})";
         // Blink only for notifications not yet opened, like an unread chat.
         if (_pending > 0 && !_blink.IsEnabled) _blink.Start();
         if (_pending == 0 && _blink.IsEnabled)
         {
             _blink.Stop();
             _dim = false;
-            _face.Opacity = 1;
+            Button.Opacity = 1;
         }
     }
 
@@ -163,7 +173,8 @@ internal sealed class WebAppModule : IDisposable
         _face.Children.Clear();
         if (_icon != null)
         {
-            var img = new Image { Source = _icon, Width = IconSize, Height = IconSize };
+            // Round, like a chat avatar.
+            var img = new Image { Source = _icon, Width = IconSize, Height = IconSize, Clip = new EllipseGeometry(new Point(IconSize / 2, IconSize / 2), IconSize / 2, IconSize / 2) };
             RenderOptions.SetBitmapScalingMode(img, BitmapScalingMode.HighQuality);
             _face.Children.Add(img);
             return;
@@ -171,7 +182,7 @@ internal sealed class WebAppModule : IDisposable
         _face.Children.Add(new Ellipse { Fill = Frozen(_app.Color) });
         _face.Children.Add(new TextBlock
         {
-            Text = _app.Letter, Foreground = Brushes.White, FontSize = 8, FontWeight = FontWeights.SemiBold,
+            Text = _app.Letter, Foreground = Brushes.White, FontSize = 10, FontWeight = FontWeights.SemiBold,
             HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
         });
     }

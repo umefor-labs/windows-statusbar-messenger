@@ -51,8 +51,12 @@ public static class Geometry
         if (IsOnBar(bubble, workArea))
         {
             var below = bubble.Y >= workArea.Y + workArea.H;
+            var y = below ? workArea.Y + workArea.H - h : workArea.Y;
+            // An icon on the right half of the bar gets the right corner, mirrored.
+            if (OnRightHalf(bubble, workArea))
+                return new Box(panel != null && panel.X - w >= workArea.X ? panel.X - w : workArea.X + workArea.W - w, y, w, h);
             var x = panel != null && panel.X + panel.W + w <= workArea.X + workArea.W ? panel.X + panel.W : workArea.X;
-            return new Box(x, below ? workArea.Y + workArea.H - h : workArea.Y, w, h);
+            return new Box(x, y, w, h);
         }
         var box = PlacePanel(bubble, w, h, workArea);
         if (panel == null || !Overlaps(box, panel)) return box;
@@ -70,6 +74,16 @@ public static class Geometry
     // The chat opened from the bar: a drawer along the left edge of the work area, as tall as the work area.
     public static Box PlaceDrawer(double w, Box workArea) =>
         new(workArea.X, workArea.Y, Math.Min(w, workArea.W), workArea.H);
+
+    // A drawer on the side of the screen nearest the icon that opened it.
+    public static Box PlaceDrawerNear(Box anchor, double w, Box workArea)
+    {
+        var box = PlaceDrawer(w, workArea);
+        return OnRightHalf(anchor, workArea) ? box with { X = workArea.X + workArea.W - box.W } : box;
+    }
+
+    public static bool OnRightHalf(Box anchor, Box workArea) =>
+        anchor.X + anchor.W / 2 > workArea.X + workArea.W / 2;
 
     static bool Overlaps(Box a, Box b) =>
         a.X < b.X + b.W && b.X < a.X + a.W && a.Y < b.Y + b.H && b.Y < a.Y + a.H;

@@ -236,7 +236,11 @@ internal sealed class WebAppDrawer : Window
         var monitor = MonitorFromPoint(new Point32 { X = (int)anchor.X, Y = (int)anchor.Y }, MonitorDefaultToNearest);
         GetDpiForMonitor(monitor, 0, out var dpi, out _);
         var area = FloatingWindow.WorkAreaAt(anchor.X, anchor.Y);
-        var box = Geometry.PlaceDrawer(DrawerWidthDip * dpi / 96.0, area);
+        var box = Geometry.PlaceDrawerNear(anchor, DrawerWidthDip * dpi / 96.0, area);
+        var right = Geometry.OnRightHalf(anchor, area);
+        // The hairline goes on the side facing the screen; the drawer slides in from its own edge.
+        _frame.BorderThickness = right ? new Thickness(1, 0, 0, 0) : new Thickness(0, 0, 1, 0);
+        var hiddenX = right ? box.X + box.W : box.X - box.W;
         ScreenBox = box;
         var handle = new WindowInteropHelper(this).EnsureHandle();
         var corners = DwmwcpDoNotRound;
@@ -248,14 +252,14 @@ internal sealed class WebAppDrawer : Window
             SetWindowPos(handle, IntPtr.Zero, (int)box.X, (int)box.Y, (int)box.W, (int)box.H, SwpNoZOrder);
             return;
         }
-        SetWindowPos(handle, IntPtr.Zero, (int)(box.X - box.W), (int)box.Y, (int)box.W, (int)box.H, SwpNoZOrder);
+        SetWindowPos(handle, IntPtr.Zero, (int)hiddenX, (int)box.Y, (int)box.W, (int)box.H, SwpNoZOrder);
         var clock = Stopwatch.StartNew();
         _slide = new DispatcherTimer(DispatcherPriority.Render) { Interval = TimeSpan.FromMilliseconds(12) };
         _slide.Tick += (_, _) =>
         {
             var t = Math.Min(1, clock.ElapsedMilliseconds / SlideMs);
             var eased = 1 - Math.Pow(1 - t, 3);
-            SetWindowPos(handle, IntPtr.Zero, (int)(box.X - box.W * (1 - eased)), (int)box.Y, 0, 0, SwpNoZOrder | SwpNoSize);
+            SetWindowPos(handle, IntPtr.Zero, (int)(hiddenX + (box.X - hiddenX) * eased), (int)box.Y, 0, 0, SwpNoZOrder | SwpNoSize);
             if (t >= 1) _slide?.Stop();
         };
         _slide.Start();

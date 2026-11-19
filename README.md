@@ -20,7 +20,7 @@ Dùng chung thư mục `%LOCALAPPDATA%\MessengerBubbles` với app gốc nên đ
 
 ## Muse
 
-Biểu tượng Muse (trợ lý AI của Meta, https://muse.ai) nằm ngay sau Messenger. Bấm vào thì Muse trượt ra từ mép trái giống khung chat. Lần đầu cần đăng nhập tài khoản Meta trong khung đó. Trang Muse luôn được giữ chạy ngầm, nên khi Muse gửi thông báo thì biểu tượng nhấp nháy, có số, kêu và hiện thẻ xem trước như tin nhắn. Số trong tiêu đề trang (nếu có, dạng "(3) Muse") cũng được hiện trên biểu tượng. Chuột phải vào thanh > `Muse` để mở hoặc tải lại trang. Phiên đăng nhập lưu ở `%LOCALAPPDATA%\WinStatusBar\WebApps\muse`.
+JARVIS (Muse, trợ lý AI của Meta, https://muse.ai) nằm ở cuối góc phải thanh: avatar 20 DIP kèm chữ JARVIS. Bấm vào thì Muse trượt ra từ mép phải màn hình, cao hết màn hình; thẻ thông báo hiện ở góc dưới bên phải. Lần đầu cần đăng nhập tài khoản Meta trong khung đó. Trang Muse luôn được giữ chạy ngầm, nên khi Muse gửi thông báo thì biểu tượng nhấp nháy, có số, kêu và hiện thẻ xem trước như tin nhắn. Số trong tiêu đề trang (nếu có, dạng "(3) Muse") cũng được hiện trên biểu tượng. Chuột phải vào thanh > `JARVIS (Muse)` để mở hoặc tải lại trang. Phiên đăng nhập lưu ở `%LOCALAPPDATA%\WinStatusBar\WebApps\muse`.
 
 ## Nguồn số liệu usage
 

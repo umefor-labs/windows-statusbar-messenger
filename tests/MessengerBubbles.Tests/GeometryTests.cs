@@ -107,6 +107,28 @@ public class GeometryTests
     }
 
     [Fact]
+    public void PlaceDrawerNear_RightIcon_OpensOnRightEdge()
+    {
+        var area = new Box(48, 0, 1872, 1014);
+        Assert.Equal(new Box(48 + 1872 - 420, 0, 420, 1014), Geometry.PlaceDrawerNear(new Box(1850, 1017, 60, 20), 420, area));
+        Assert.Equal(new Box(48, 0, 420, 1014), Geometry.PlaceDrawerNear(new Box(60, 1017, 20, 20), 420, area));
+    }
+
+    [Fact]
+    public void PlacePreview_RightIcon_SitsInBottomRightCorner()
+    {
+        var area = new Box(48, 0, 1872, 1014);
+        Assert.Equal(new Box(1920 - 280, 1014 - 56, 280, 56), Geometry.PlacePreview(new Box(1850, 1017, 60, 20), 280, 56, area, null));
+    }
+
+    [Fact]
+    public void PlacePreview_RightIcon_FlushBesideRightDrawer()
+    {
+        var drawer = new Box(1500, 0, 420, 1040);
+        Assert.Equal(new Box(1500 - 280, 1040 - 56, 280, 56), Geometry.PlacePreview(new Box(1850, 1043, 60, 20), 280, 56, Screen, drawer));
+    }
+
+    [Fact]
     public void PlacePreview_FlushBesideFullHeightDrawer()
     {
         var drawer = new Box(0, 0, 380, 1040);
