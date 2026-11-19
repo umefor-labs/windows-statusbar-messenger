@@ -177,6 +177,12 @@ class MessengerStrip : StackPanel
         UpdateListTip();
     }
 
+    public void ClearNotice()
+    {
+        _notice = null;
+        UpdateListTip();
+    }
+
     void UpdateListTip()
     {
         var lines = new List<string> { "Messenger", Texts.Current.ChatList };

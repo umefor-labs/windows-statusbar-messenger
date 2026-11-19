@@ -15,35 +15,57 @@ sealed class MessengerModule : IDisposable
     // Same name as the standalone app: holding it keeps the two from showing every message twice.
     const string MutexName = "MessengerBubbles.SingleInstance";
 
-    readonly Mutex? _mutex;
+    Mutex? _mutex;
     readonly Settings _settings;
-    readonly Watcher? _watcher;
-    readonly ChatPanel? _panel;
-    readonly GlobalHotkey? _hotkey;
+    Watcher? _watcher;
+    ChatPanel? _panel;
+    GlobalHotkey? _hotkey;
+    MenuItem? _menu;
+    // Retries taking the shared name: at sign-in something can hold it for a while, and giving up then left
+    // Messenger off until the bar was restarted by hand.
+    readonly System.Windows.Threading.DispatcherTimer _retry = new() { Interval = TimeSpan.FromSeconds(5) };
 
     public MessengerStrip Strip { get; }
 
-    /// <summary>False when the standalone Messenger Bubbles is already running; the strip then only says so.</summary>
+    /// <summary>False while the standalone Messenger Bubbles (or anything holding its name) runs; the strip then only says so.</summary>
     public bool Active => _watcher != null;
 
     public MessengerModule()
     {
         Texts.Current = Texts.Vietnamese;
         _settings = Settings.Load(AppPaths.SettingsFile);
+        Strip = new MessengerStrip(_settings,
+            url => _watcher?.GetLoadedResourceAsync(url) ?? Task.FromResult<byte[]?>(null),
+            href => _panel?.IsShowingAsync(href) ?? Task.FromResult(false),
+            () => _panel?.ScreenBox);
+        Strip.AvatarClicked += (href, box) => _panel?.Toggle(href, box);
+        _retry.Tick += async (_, _) =>
+        {
+            if (!TryActivate()) return;
+            _retry.Stop();
+            AppPaths.Log("messenger name freed, starting");
+            await StartAsync();
+        };
+        if (!TryActivate())
+        {
+            AppPaths.Log("messenger name taken, retrying");
+            Strip.Notice("Messenger Bubbles bản riêng đang chạy. Thoát nó là thanh tự bật chat.");
+            _retry.Start();
+        }
+    }
 
+    bool TryActivate()
+    {
         var mutex = new Mutex(true, MutexName, out var first);
         if (!first)
         {
             mutex.Dispose();
-            Strip = new MessengerStrip(_settings, _ => Task.FromResult<byte[]?>(null), _ => Task.FromResult(false), () => null);
-            Strip.Notice("Messenger Bubbles bản riêng đang chạy. Thoát nó rồi mở lại thanh để dùng chat trên thanh.");
-            return;
+            return false;
         }
         _mutex = mutex;
 
         _watcher = new Watcher();
         _panel = new ChatPanel(_settings);
-        Strip = new MessengerStrip(_settings, _watcher.GetLoadedResourceAsync, _panel.IsShowingAsync, () => _panel.ScreenBox);
         _hotkey = new GlobalHotkey();
         _hotkey.Pressed += Strip.ToggleHidden;
         if (!_hotkey.Registered) AppPaths.Log("hotkey taken");
@@ -51,12 +73,15 @@ sealed class MessengerModule : IDisposable
         _watcher.Scanned += Strip.Apply;
         _watcher.NeedsLogin += Strip.SetLogin;
         _watcher.HealthChanged += Strip.SetBroken;
-        Strip.AvatarClicked += _panel.Toggle;
         _panel.LayoutBroken += () => Strip.Notice(Texts.Current.PanelBroken);
+        var watcher = _watcher;
         _panel.LeftOnOtherThread += (from, path) =>
         {
-            if (_watcher.FindRow(path) is { } row) Strip.SwitchTo(from, row);
+            if (watcher.FindRow(path) is { } row) Strip.SwitchTo(from, row);
         };
+        Strip.ClearNotice();
+        if (_menu != null) FillMenu(_menu);
+        return true;
     }
 
     public async Task StartAsync()
@@ -66,6 +91,7 @@ sealed class MessengerModule : IDisposable
         {
             await _watcher.StartAsync(await AppPaths.CreateEnvironmentAsync());
             _panel.Preload();
+            AppPaths.Log("messenger started");
         }
         catch (WebView2RuntimeNotFoundException)
         {
@@ -81,12 +107,19 @@ sealed class MessengerModule : IDisposable
     /// <summary>The tray menu of the standalone app, as a submenu of the bar's right-click menu.</summary>
     public MenuItem BuildMenu()
     {
+        _menu = new MenuItem { Header = "Messenger" };
+        FillMenu(_menu);
+        return _menu;
+    }
+
+    void FillMenu(MenuItem root)
+    {
         var t = Texts.Current;
-        var root = new MenuItem { Header = "Messenger" };
+        root.Items.Clear();
         if (_watcher == null)
         {
             root.Items.Add(new MenuItem { Header = "Đang tắt: Messenger Bubbles bản riêng đang chạy", IsEnabled = false });
-            return root;
+            return;
         }
 
         root.Items.Add(Item(t.OpenFacebook, _watcher.ShowWindow));
@@ -100,7 +133,6 @@ sealed class MessengerModule : IDisposable
         root.Items.Add(SnoozeMenu());
         root.Items.Add(SizeMenu());
         root.Items.Add(Toggle(t.DisableGpu, _settings.DisableGpu, on => _settings.DisableGpu = on, t.RestartToApply));
-        return root;
 
         MenuItem SnoozeMenu()
         {
@@ -179,6 +211,7 @@ sealed class MessengerModule : IDisposable
 
     public void Dispose()
     {
+        _retry.Stop();
         _hotkey?.Dispose();
         _watcher?.Exit();
         _panel?.Close();
