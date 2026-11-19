@@ -28,11 +28,17 @@ public partial class MainWindow : Window
         UsagePanel.Children.Insert(0, _messenger.Strip);
         var menu = ContextMenu;
         menu.Items.Insert(menu.Items.IndexOf(MoveMenu) + 1, _messenger.BuildMenu());
+
+        // Muse (Meta's AI agent): its icon right after Messenger, same drawer and notifications.
+        _muse = new WebApps.WebAppModule(WebApps.WebApp.Muse);
+        UsagePanel.Children.Insert(1, _muse.Button);
+        menu.Items.Insert(menu.Items.IndexOf(MoveMenu) + 2, _muse.BuildMenu());
         // Facebook's page can change under the Messenger code; a failure there must not take the bar down.
         Application.Current.DispatcherUnhandledException += (_, e) =>
         {
-            if (e.Exception.StackTrace?.Contains("MessengerBubbles.") != true) return;
-            UsageService.Log($"messenger: {e.Exception.GetType().Name}: {e.Exception.Message}");
+            var trace = e.Exception.StackTrace ?? "";
+            if (!trace.Contains("MessengerBubbles.") && !trace.Contains("WinStatusBar.WebApps.")) return;
+            UsageService.Log($"messenger/webapp: {e.Exception.GetType().Name}: {e.Exception.Message}");
             e.Handled = true;
         };
 
@@ -70,11 +76,13 @@ public partial class MainWindow : Window
             StartUsageLoop();
             StartAntigravityLoop();
             _ = _messenger.StartAsync();
+            _ = _muse.StartAsync();
         };
         Closed += (_, _) =>
         {
             _cts.Cancel();
             _messenger.Dispose();
+            _muse.Dispose();
             _appBar?.Dispose();
         };
 
@@ -225,5 +233,6 @@ public partial class MainWindow : Window
     private readonly UsageMeter _antigravity;
     private readonly UsageMeter _codex;
     private readonly MessengerBubbles.MessengerModule _messenger;
+    private readonly WebApps.WebAppModule _muse;
     private Settings _settings = new();
 }
