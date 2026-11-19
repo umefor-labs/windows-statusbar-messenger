@@ -37,13 +37,13 @@ dotnet publish src\WinStatusBar -c Release -r win-x64 --self-contained false -p:
 Mở PowerShell và chạy:
 
 ```powershell
-irm https://raw.githubusercontent.com/umefor-labs/windows-statusbar/main/tools/install.ps1 | iex
+irm https://raw.githubusercontent.com/umefor-labs/windows-statusbar-messenger/main/tools/install.ps1 | iex
 ```
 
 Windows sẽ hỏi quyền admin một lần. Gỡ cài đặt:
 
 ```powershell
-irm https://raw.githubusercontent.com/umefor-labs/windows-statusbar/main/tools/uninstall.ps1 | iex
+irm https://raw.githubusercontent.com/umefor-labs/windows-statusbar-messenger/main/tools/uninstall.ps1 | iex
 ```
 
 Script cài đặt:

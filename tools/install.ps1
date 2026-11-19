@@ -1,6 +1,6 @@
 # Installs WinStatusBar for the current user.
 #   One-line install (PowerShell):
-#     irm https://raw.githubusercontent.com/umefor-labs/windows-statusbar/main/tools/install.ps1 | iex
+#     irm https://raw.githubusercontent.com/umefor-labs/windows-statusbar-messenger/main/tools/install.ps1 | iex
 #   From a local build: .\tools\install.ps1 -Source .\publish\WinStatusBar.exe
 #
 # - The bar starts at logon with normal rights (HKCU Run), so its web logins work.
@@ -14,7 +14,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
-$repo = 'umefor-labs/windows-statusbar'
+$repo = 'umefor-labs/windows-statusbar-messenger'
 $log = Join-Path $env:TEMP 'WinStatusBar-install.log'
 
 $isAdmin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
