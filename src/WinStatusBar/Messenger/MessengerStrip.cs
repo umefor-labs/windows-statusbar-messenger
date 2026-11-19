@@ -264,10 +264,11 @@ class MessengerStrip : StackPanel
     }
 }
 
-/// <summary>A 20 DIP round face with an unread badge, sized for a 26 DIP bar.</summary>
+/// <summary>A 14 DIP round face with an unread badge, matching the usage logos on the 26 DIP bar.</summary>
 class ChatAvatar : Grid
 {
-    const double Size = 20;
+    // Same 14 DIP as the usage logos.
+    const double Size = 14;
     static readonly Brush Blue = Frozen(Color.FromRgb(0x08, 0x66, 0xFF));
     static readonly Brush Red = Frozen(Color.FromRgb(0xE5, 0x39, 0x35));
 
@@ -275,10 +276,10 @@ class ChatAvatar : Grid
     readonly Ellipse _ring = new() { Width = Size + 2, Height = Size + 2, StrokeThickness = 1.5, Stroke = Blue, Visibility = Visibility.Collapsed };
     readonly TextBlock _label = new()
     {
-        Foreground = Brushes.White, FontSize = 10, FontWeight = FontWeights.SemiBold,
+        Foreground = Brushes.White, FontSize = 8, FontWeight = FontWeights.SemiBold,
         HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
     };
-    readonly TextBlock _badgeText = new() { Foreground = Brushes.White, FontSize = 8, FontWeight = FontWeights.Bold, Margin = new Thickness(3, 0, 3, 0) };
+    readonly TextBlock _badgeText = new() { Foreground = Brushes.White, FontSize = 7, FontWeight = FontWeights.Bold, Margin = new Thickness(2, -1, 2, 0) };
     readonly Border _badge;
     readonly UIElement _faceGroup;
 
@@ -292,8 +293,8 @@ class ChatAvatar : Grid
 
     ChatAvatar(string label, UIElement? glyph)
     {
-        Width = Size + 6;
-        Height = Size + 4;
+        Width = Size + 7;
+        Height = Size + 6;
         Margin = new Thickness(0, 0, 4, 0);
         VerticalAlignment = VerticalAlignment.Center;
         Background = Brushes.Transparent; // hit-testable
@@ -309,7 +310,7 @@ class ChatAvatar : Grid
 
         _badge = new Border
         {
-            Background = Red, CornerRadius = new CornerRadius(5), MinWidth = 10, Height = 10,
+            Background = Red, CornerRadius = new CornerRadius(4.5), MinWidth = 9, Height = 9,
             HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top,
             Child = _badgeText, Visibility = Visibility.Collapsed,
         };
