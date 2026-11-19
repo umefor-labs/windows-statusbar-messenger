@@ -43,7 +43,8 @@ class DismissZoneWindow : FloatingWindow
 
 class PreviewWindow : FloatingWindow
 {
-    const double CardW = 280, CardH = 56, ShadowRoom = 10;
+    // No shadow: the card sits flush in its corner, so the window is exactly the card.
+    const double CardW = 280, CardH = 56, ShadowRoom = 0;
 
     readonly Ellipse _avatar = new() { Width = 40, Height = 40 };
     readonly TextBlock _initial = new()
@@ -87,7 +88,9 @@ class PreviewWindow : FloatingWindow
             // Square, to sit flush in the corner between the taskbar and the status bar.
             CornerRadius = new CornerRadius(0),
             Background = Brushes.White,
-            Effect = new DropShadowEffect { BlurRadius = 10, ShadowDepth = 2, Direction = 270, Opacity = 0.3 },
+            // A hairline instead of a shadow, so a white card still stands out on a white page.
+            BorderBrush = new SolidColorBrush(Color.FromRgb(0xD6, 0xD6, 0xD6)),
+            BorderThickness = new Thickness(1),
             Child = row,
         };
         Content = _card;

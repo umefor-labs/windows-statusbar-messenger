@@ -36,6 +36,8 @@ class ChatPanel : Window
 
     readonly Settings _settings;
     WebView2 _web = new();
+    // Holds the page; as a drawer it draws a hairline on the side facing the screen.
+    readonly System.Windows.Controls.Border _frame = new();
     Task? _init;
     Task? _suspending;
     string? _openHref;
@@ -62,7 +64,9 @@ class ChatPanel : Window
         ShowInTaskbar = false;
         ShowActivated = false;
         WindowStartupLocation = WindowStartupLocation.Manual;
-        Content = _web;
+        _frame.Child = _web;
+        _frame.SetResourceReference(System.Windows.Controls.Border.BorderBrushProperty, "BarBorder");
+        Content = _frame;
         Deactivated += (_, _) => HidePanel();
         SourceInitialized += (_, _) => RoundCorners();
     }
@@ -232,6 +236,8 @@ class ChatPanel : Window
         var handle = new WindowInteropHelper(this).EnsureHandle();
         // A drawer sits flush against the screen edge, so square corners.
         var corners = drawer ? DwmwcpDoNotRound : DwmwcpRound;
+        // Left drawer: line on its right edge, where it meets the windows behind it.
+        _frame.BorderThickness = drawer ? new Thickness(0, 0, 1, 0) : new Thickness(0);
         DwmSetWindowAttribute(handle, DwmwaWindowCornerPreference, ref corners, sizeof(int));
 
         _slide?.Stop();
@@ -326,7 +332,7 @@ class ChatPanel : Window
             _suspending = null;
             _web.Dispose();
             _web = new WebView2();
-            Content = _web;
+            _frame.Child = _web;
         });
     }
 }
