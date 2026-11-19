@@ -93,11 +93,25 @@ public class GeometryTests
     }
 
     [Fact]
-    public void PlacePreview_BesideFullHeightDrawer()
+    public void PlacePreview_FromBottomBar_SitsInBottomLeftCorner()
+    {
+        var area = new Box(48, 0, 1872, 1014);
+        Assert.Equal(new Box(48, 1014 - 56, 280, 56), Geometry.PlacePreview(new Box(60, 1017, 20, 20), 280, 56, area, null));
+    }
+
+    [Fact]
+    public void PlacePreview_FromTopBar_SitsInTopLeftCorner()
+    {
+        var area = new Box(48, 26, 1872, 1014);
+        Assert.Equal(new Box(48, 26, 280, 56), Geometry.PlacePreview(new Box(60, 3, 20, 20), 280, 56, area, null));
+    }
+
+    [Fact]
+    public void PlacePreview_FlushBesideFullHeightDrawer()
     {
         var drawer = new Box(0, 0, 380, 1040);
         var p = Geometry.PlacePreview(new Box(10, 1043, 20, 20), 280, 56, Screen, drawer);
-        Assert.Equal(380 + 8, p.X);
+        Assert.Equal(new Box(380, 1040 - 56, 280, 56), p);
     }
 
     [Fact]

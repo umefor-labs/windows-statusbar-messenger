@@ -84,7 +84,8 @@ class PreviewWindow : FloatingWindow
         _card = new Border
         {
             Margin = new Thickness(ShadowRoom),
-            CornerRadius = new CornerRadius(CardH / 2),
+            // Square, to sit flush in the corner between the taskbar and the status bar.
+            CornerRadius = new CornerRadius(0),
             Background = Brushes.White,
             Effect = new DropShadowEffect { BlurRadius = 10, ShadowDepth = 2, Direction = 270, Opacity = 0.3 },
             Child = row,

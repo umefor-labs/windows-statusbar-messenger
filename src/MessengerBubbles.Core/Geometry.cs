@@ -46,6 +46,14 @@ public static class Geometry
     // Beside the bubble, moved above or below the open chat panel rather than covering it.
     public static Box PlacePreview(Box bubble, double w, double h, Box workArea, Box? panel)
     {
+        // From the status bar: flush in the work area's corner by the bar (left edge, next to the bar),
+        // or flush against the open drawer's right side.
+        if (IsOnBar(bubble, workArea))
+        {
+            var below = bubble.Y >= workArea.Y + workArea.H;
+            var x = panel != null && panel.X + panel.W + w <= workArea.X + workArea.W ? panel.X + panel.W : workArea.X;
+            return new Box(x, below ? workArea.Y + workArea.H - h : workArea.Y, w, h);
+        }
         var box = PlacePanel(bubble, w, h, workArea);
         if (panel == null || !Overlaps(box, panel)) return box;
         if (panel.Y - Gap - h >= workArea.Y) return box with { Y = panel.Y - Gap - h };
