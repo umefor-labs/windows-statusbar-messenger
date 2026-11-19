@@ -322,7 +322,8 @@ class ChatAvatar : Grid
         var logo = new System.Windows.Shapes.Path
         {
             Data = System.Windows.Media.Geometry.Parse(WinStatusBar.Icons.Messenger),
-            Fill = Blue, Width = Size, Height = Size, Stretch = Stretch.Uniform,
+            // Same 14 DIP as the usage logos.
+            Fill = Blue, Width = 14, Height = 14, Stretch = Stretch.Uniform,
             HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
         };
         var icon = new ChatAvatar("", logo) { _logo = logo };
