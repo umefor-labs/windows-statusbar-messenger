@@ -148,18 +148,26 @@ internal sealed class WebAppDrawer : Window
         }
         catch (Exception e) when (e is not WebView2RuntimeNotFoundException)
         {
-            UsageService.Log($"{_app.Name}: load failed: {e.GetType().Name}");
+            UsageService.Log($"{_app.Name}: load failed: {e.GetType().Name} {e.Message}");
             _init = null;
         }
         if (ScreenBox == null) Hide();
     }
 
+    static Task<T> WithTimeout<T>(Task<T> t, string what) => MessengerBubbles.AppPaths.WithTimeout(t, what);
+    static Task WithTimeout(Task t, string what) => MessengerBubbles.AppPaths.WithTimeout(t, what);
+
     async Task InitAsync()
     {
         Directory.CreateDirectory(_app.ProfileDir);
-        var env = await CoreWebView2Environment.CreateAsync(null, _app.ProfileDir);
-        await _web.EnsureCoreWebView2Async(env);
+        var env = await WithTimeout(CoreWebView2Environment.CreateAsync(null, _app.ProfileDir), "environment");
+        await WithTimeout(_web.EnsureCoreWebView2Async(env), "control");
         var core = _web.CoreWebView2;
+        // Which site the page settles on (host only), so a sign-in page after a restart shows in the log.
+        core.NavigationCompleted += (_, _) =>
+        {
+            if (Uri.TryCreate(core.Source, UriKind.Absolute, out var u)) UsageService.Log($"{_app.Name}: page {u.Host}");
+        };
         core.Settings.AreDefaultContextMenusEnabled = true;
         core.PermissionRequested += (_, e) =>
         {

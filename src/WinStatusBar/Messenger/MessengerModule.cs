@@ -87,9 +87,10 @@ sealed class MessengerModule : IDisposable
     public async Task StartAsync()
     {
         if (_watcher == null || _panel == null) return;
+        AppPaths.Log("messenger starting");
         try
         {
-            await _watcher.StartAsync(await AppPaths.CreateEnvironmentAsync());
+            await _watcher.StartAsync();
             _panel.Preload();
             AppPaths.Log("messenger started");
         }

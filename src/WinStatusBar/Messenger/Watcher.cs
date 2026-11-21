@@ -52,9 +52,8 @@ class Watcher : Window
         };
     }
 
-    public async Task StartAsync(CoreWebView2Environment env)
+    public async Task StartAsync()
     {
-        _env = env;
         _tick.Start();
         await AttachAsync();
     }
@@ -101,8 +100,9 @@ class Watcher : Window
         }
         try
         {
-            _env ??= await AppPaths.CreateEnvironmentAsync();
-            await _web.EnsureCoreWebView2Async(_env);
+            // Right after sign-in these calls have hung with no error, leaving chat off until a manual restart.
+            _env ??= await AppPaths.WithTimeout(AppPaths.CreateEnvironmentAsync(), "environment");
+            await AppPaths.WithTimeout(_web.EnsureCoreWebView2Async(_env), "control");
             var core = _web.CoreWebView2;
             core.IsMuted = true;
             core.MemoryUsageTargetLevel = CoreWebView2MemoryUsageTargetLevel.Low;
@@ -121,7 +121,7 @@ class Watcher : Window
         }
         catch (Exception e) when (e is not WebView2RuntimeNotFoundException)
         {
-            AppPaths.Log($"attach failed: {e.GetType().Name}");
+            AppPaths.Log($"attach failed: {e.GetType().Name} {e.Message}");
             ReplaceWebView();
             ScheduleReload();
         }

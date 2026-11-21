@@ -25,6 +25,18 @@ static class AppPaths
         return CoreWebView2Environment.CreateAsync(null, Path.Combine(Dir, "profile"), options);
     }
 
+    public static async Task<T> WithTimeout<T>(Task<T> task, string what)
+    {
+        if (await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(45))) != task) throw new TimeoutException(what);
+        return await task;
+    }
+
+    public static async Task WithTimeout(Task task, string what)
+    {
+        if (await Task.WhenAny(task, Task.Delay(TimeSpan.FromSeconds(45))) != task) throw new TimeoutException(what);
+        await task;
+    }
+
     // Status and errors only: never names or message text.
     public static void Log(string line)
     {
